@@ -1,4 +1,4 @@
-// para compilar: gcc prodcons_1_thread_varcond.c -o prodcons_1_thread_varcond -lpthread
+// para compilar: gcc prodcons_1_thread_varcond.c -o prodcons_1_thread_varcond 	
 // para executar: prodcons_1_thread_varcond
 //
 #include <stdlib.h>
