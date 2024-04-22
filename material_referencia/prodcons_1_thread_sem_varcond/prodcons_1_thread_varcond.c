@@ -52,7 +52,7 @@ void process_item(int my_item) {
 void *producer(void) {
 	int item;
 	while (produced < MAX_PRODUCED ) {
-		item = create_item();
+		item = create_item();	
 		pthread_mutex_lock(&item_queue_cond_lock);
 		while (item_available == MAX_QUEUE)
 			pthread_cond_wait(&cond_queue_empty, &item_queue_cond_lock);

@@ -11,149 +11,203 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <pthread.h>
-#include <semaphore.h>
+#include <unistd.h>    //  Para o uso da função sleep()
+#include <pthread.h>   //  Para uso das threads
+#include <semaphore.h> //  Para uso dos semaforos
 
-#define MAX_DEPOSITO_CANETA 100
-#define MATERIA_PRIMA 100000
+#define DELAY_COMPRA_CONSUMIDOR 1
+#define COMPRA_POR_INTERACAO 1
+#define ENVIO_MATERIA_INTERACAO 3
+#define TEMPO_ENVIO_DEPFAB 1
+#define TEMPO_PRODUCAO_CANETA 1
+#define MAX_DEPOSITO_CANETA 8
+#define MAX_MATERIA_PRIMA 200
 
-
-pthread_t thread_list[6];
+pthread_t thread_list_ID[5];
 
 int slots_disponiveis = MAX_DEPOSITO_CANETA;
-int materia_prima_disponivel = MAX_DEPOSITO_CANETA;
+int materia_prima_disponivel = MAX_MATERIA_PRIMA;
 
+pthread_mutex_t emProducao = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t acessar_deposito_caneta = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t acessar_deposito_materiaPrima = PTHREAD_MUTEX_INITIALIZER;
+sem_t decrementa_materiaPrima;
+sem_t produza;
+sem_t enviarCaneta;
+// pthread_mutex_t sla;
+// pthread_cond_t produza;
 
 /*
 Suposições lógicas para descrição do projeto
-    -> Produtor tem um mini armazém de matéria prima, mas fabrica e envia 1 a 1 caneta por vez 
+    -> Produtor tem um mini armazém de matéria prima, mas fabrica e envia 1 a 1 caneta por vez
         ( não tem armazem de produto pronto na fábrica), pois é o que faz mais sentido.
-    
+
     ->  Se há n canetas disponíveis no depósito e o comprador pedir m canetas, tal que m > n, o depósito envia apenas n canetas
         Pois não há como ser diferente.
 
 */
 
 /*  RANKS:
-        thread_list[0] = Criador
-        thread_list[1] = Depósito de Matéria Prima
-        thread_list[2] = Célula de Fabricação de Canetas
-        thread_list[3] = Controle
-        thread_list[4] = Depósito de canetas
-        thread_list[5] = Comprador
+        thread_list_ID[0] = Depósito de Matéria Prima
+        thread_list_ID[1] = Célula de Fabricação de Canetas
+        thread_list_ID[2] = Controle
+        thread_list_ID[3] = Depósito de canetas
+        thread_list_ID[4] = Comprador
 */
-
-int verifica_depos_caneta(){
+// -------------------------- Funções acessoras --------------------------
+int verifica_depos_caneta()
+{
+    int quant_slot = materia_prima_disponivel;
+    return quant_slot;
+}
+int verifica_depos_materiaPrima()
+{
     int quant_slot = slots_disponiveis;
     return quant_slot;
 }
 
+// -------------------------- Threads --------------------------
 void depos_madeira(void)
 {
     printf("\niniciado depos_madeira");
+
+    while (1)
+    {
+        sem_wait(&decrementa_materiaPrima);
+        pthread_mutex_lock(&acessar_deposito_materiaPrima);
+        materia_prima_disponivel--;
+        printf("\nDEPMAT: materia prima disponivel: %d", materia_prima_disponivel);
+        pthread_mutex_unlock(&acessar_deposito_materiaPrima);
+    }
 }
 
 void celula_fabrica(void)
 {
-    printf("\niniciado celula_fabrica");
-}
+    printf("\nIniciado celula_fabrica");
 
-
-void controle(void)
-{
-    printf("\niniciado controle");
-    int prod_disponivel = 0;
-    
-    // regiao critica
-    prod_disponivel = verifica_depos_caneta();
-    // regiao critica
-
+    while (1)
+    {
+        sem_wait(&produza);
+        printf("\nFAB:  fábrica começou a produzir\n");
+        // int buffer_produzido = 0;
+        // int buffer_aProduzir = ENVIO_MATERIA_INTERACAO;
+        // for (int i = 0; i < ENVIO_MATERIA_INTERACAO; i++)
+        // {
+        // buffer_aProduzir--;
+        sleep(TEMPO_PRODUCAO_CANETA);
+        // buffer_produzido++;
+        sem_post(&enviarCaneta);
+        // }
+        // sem_post(&produza);
+    }
 }
 
 void depos_caneta(void)
 {
     printf("\niniciado depos_caneta");
+    while (1)
+    {
+        sem_wait(&enviarCaneta);
 
-    
+        pthread_mutex_lock(&acessar_deposito_caneta);
+        slots_disponiveis--;
+        printf("\nDEPCAN:   quantidade de canetas no depósito são %d e slots %d", MAX_DEPOSITO_CANETA - slots_disponiveis, slots_disponiveis);
+        pthread_mutex_unlock(&acessar_deposito_caneta);
+    }
 }
 
 void comprador(void)
 {
     printf("\niniciado comprador");
 }
-
-void criador(void)
+void controle(void)
 {
+    printf("\niniciado controle");
 
-    printf("Criador iniciado\n");
+    // Inicio da região crítica
+    while (1)
+    {
 
-    if (pthread_create(&thread_list[1], NULL, (void *)depos_madeira, 0) != 0)
-    {
-        fprintf(stderr, "Erro ao criar o Célula de depósito de materia prima\n");
-        return;
-    }
-    if (pthread_join(thread_list[1], NULL) != 0)
-    {
-        fprintf(stderr, "erro ao iniciar a thread\n");
-        return;
-    }
-    if (pthread_create(&thread_list[2], NULL, (void *)celula_fabrica, 0) != 0)
-    {
-        fprintf(stderr, "Erro ao criar o celula de fabricao de canetas\n");
-        return;
-    }
-    if (pthread_join(thread_list[2], NULL) != 0)
-    {
-        fprintf(stderr, "erro ao iniciar a thread\n");
-        return;
-    }
+        pthread_mutex_lock(&acessar_deposito_caneta);
+        pthread_mutex_lock(&acessar_deposito_materiaPrima);
+        int slot_disponivel = verifica_depos_caneta();
+        int estoque_materiaPrima = verifica_depos_materiaPrima();
+        pthread_mutex_unlock(&acessar_deposito_materiaPrima);
+        pthread_mutex_unlock(&acessar_deposito_caneta);
+        if (estoque_materiaPrima <= 0 && slot_disponivel <= 0)
 
-    if (pthread_create(&thread_list[3], NULL, (void *)controle, 0) != 0)
-    {
-        fprintf(stderr, "Erro ao criar o Controle\n");
-        return;
-    }
-    if (pthread_join(thread_list[3], NULL) != 0)
-    {
-        fprintf(stderr, "erro ao iniciar a thread\n");
-        return;
-    }
-    if (pthread_create(&thread_list[4], NULL, (void *)depos_caneta, 0) != 0)
-    {
-        fprintf(stderr, "Erro ao criar o Depósito de canetas\n");
-        return;
-    }
-    if (pthread_join(thread_list[4], NULL) != 0)
-    {
-        fprintf(stderr, "erro ao iniciar a thread\n");
-        return;
-    }
-    if (pthread_create(&thread_list[5], NULL, (void *)comprador, 0) != 0)
-    {
-        fprintf(stderr, "Erro ao criar o Comprador\n");
-        return;
-    }
-    if (pthread_join(thread_list[5], NULL) != 0)
-    {
-        fprintf(stderr, "erro ao iniciar a thread\n");
-        return;
+        {
+            //  Finalizar programa
+            printf("\n\tCódigo finalizado. Estoque de materia prima acabou e o depósito de canetas está vazio");
+            break;
+        }
+        if (slot_disponivel > 0)
+        {
+            sem_post(&decrementa_materiaPrima);
+            decrementaMateriaPrima(ENVIO_MATERIA_INTERACAO); //  Decrementa x unidades do estoque de materia prima
+            sem_post(&produza);
+        }
     }
 }
-
 int main()
 {
+    sem_init(&decrementa_materiaPrima, 0, 0); //  Inicia o semaforo para controle de estoque de materia prima
+    sem_init(&produza, 0, 0);                 //  Inicia o semaforo para não produzindo
+    sem_init(&enviarCaneta, 0, 0);            //  Inicia o semaforo para o envio das canetas
+
+    { //  Criação das threads
+        if (pthread_create(&thread_list_ID[0], 0, (void *)depos_madeira, 0) != 0)
+        {
+            fprintf(stderr, "Erro ao criar o Célula de depósito de materia prima\n");
+        }
+        if (pthread_create(&thread_list_ID[1], 0, (void *)celula_fabrica, 0) != 0)
+        {
+            fprintf(stderr, "Erro ao criar o celula de fabricao de canetas\n");
+        }
+
+        if (pthread_create(&thread_list_ID[2], 0, (void *)controle, 0) != 0)
+        {
+            fprintf(stderr, "Erro ao criar o Controle\n");
+        }
+        if (pthread_create(&thread_list_ID[3], 0, (void *)depos_caneta, 0) != 0)
+        {
+            fprintf(stderr, "Erro ao criar o Depósito de canetas\n");
+        }
+        if (pthread_create(&thread_list_ID[4], 0, (void *)comprador, 0) != 0)
+        {
+            fprintf(stderr, "Erro ao criar o Comprador\n");
+        }
+        //  Threads iniciadas e agora serão dadas o join
+
+        // if (pthread_join(thread_list_ID[0], NULL) != 0)
+        // {
+        //     fprintf(stderr, "erro ao iniciar a thread\n");
+        // }
+        // if (pthread_join(thread_list_ID[1], NULL) != 0)
+        // {
+        //     fprintf(stderr, "erro ao iniciar a thread\n");
+        // }
+        // if (pthread_join(thread_list_ID[2], NULL) != 0)
+        // {
+        //     fprintf(stderr, "erro ao iniciar a thread\n");
+        // }
+        // if (pthread_join(thread_list_ID[3], NULL) != 0)
+        // {
+        //     fprintf(stderr, "erro ao iniciar a thread\n");
+        // }
+        // if (pthread_join(thread_list_ID[4], NULL) != 0)
+        // {
+        //     fprintf(stderr, "erro ao iniciar a thread\n");
+        // }
+    }
+    controle();
+    /* coisas a acertar no código:
+        acertar essa linha pra == 0            if (estoque_materiaPrima <= 0 && slot_disponivel <= 0)
 
 
-    if (pthread_create(&thread_list[0], NULL, (void *)criador, NULL) != 0)
-    {
-        fprintf(stderr, "Erro ao criar o Criador\n");
-        return 1;
-    }
-    if (pthread_join(thread_list[0], NULL) != 0)
-    {
-        fprintf(stderr, "erro ao iniciar a thread\n");
-        return 1;
-    }
-    // printf("teste");
+
+        destruir os semaforos aqui no final
+    */
+
     return 0;
 }
