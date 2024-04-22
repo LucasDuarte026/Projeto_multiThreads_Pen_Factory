@@ -28,7 +28,7 @@ pthread_t thread_list_ID[5];
 int slots_disponiveis = MAX_DEPOSITO_CANETA;
 int materia_prima_disponivel = MAX_MATERIA_PRIMA;
 
-pthread_mutex_t emProducao = PTHREAD_MUTEX_INITIALIZER;
+int emProducao = 0;
 pthread_mutex_t acessar_deposito_caneta = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t acessar_deposito_materiaPrima = PTHREAD_MUTEX_INITIALIZER;
 sem_t decrementa_materiaPrima;
@@ -57,12 +57,12 @@ Suposições lógicas para descrição do projeto
 // -------------------------- Funções acessoras --------------------------
 int verifica_depos_caneta()
 {
-    int quant_slot = materia_prima_disponivel;
+    int quant_slot = slots_disponiveis;
     return quant_slot;
 }
 int verifica_depos_materiaPrima()
 {
-    int quant_slot = slots_disponiveis;
+    int quant_slot = materia_prima_disponivel;
     return quant_slot;
 }
 
@@ -76,7 +76,7 @@ void depos_madeira(void)
         sem_wait(&decrementa_materiaPrima);
         pthread_mutex_lock(&acessar_deposito_materiaPrima);
         materia_prima_disponivel--;
-        printf("\nDEPMAT: materia prima disponivel: %d", materia_prima_disponivel);
+        // printf("\nDEPMAT: materia prima disponivel: %d", materia_prima_disponivel);
         pthread_mutex_unlock(&acessar_deposito_materiaPrima);
     }
 }
@@ -88,6 +88,7 @@ void celula_fabrica(void)
     while (1)
     {
         sem_wait(&produza);
+        emProducao = 1;
         printf("\nFAB:  fábrica começou a produzir\n");
         // int buffer_produzido = 0;
         // int buffer_aProduzir = ENVIO_MATERIA_INTERACAO;
@@ -96,6 +97,7 @@ void celula_fabrica(void)
         // buffer_aProduzir--;
         sleep(TEMPO_PRODUCAO_CANETA);
         // buffer_produzido++;
+        emProducao = 0;
         sem_post(&enviarCaneta);
         // }
         // sem_post(&produza);
@@ -120,6 +122,7 @@ void comprador(void)
 {
     printf("\niniciado comprador");
 }
+
 void controle(void)
 {
     printf("\niniciado controle");
@@ -130,32 +133,44 @@ void controle(void)
 
         pthread_mutex_lock(&acessar_deposito_caneta);
         pthread_mutex_lock(&acessar_deposito_materiaPrima);
-        int slot_disponivel = verifica_depos_caneta();
-        int estoque_materiaPrima = verifica_depos_materiaPrima();
+        int slot_disponivel_local = slots_disponiveis;
+        int estoque_materiaPrima_local = materia_prima_disponivel;
         pthread_mutex_unlock(&acessar_deposito_materiaPrima);
         pthread_mutex_unlock(&acessar_deposito_caneta);
-        if (estoque_materiaPrima <= 0 && slot_disponivel <= 0)
+        if (estoque_materiaPrima_local <= 0 && slot_disponivel_local <= 0)
 
         {
             //  Finalizar programa
             printf("\n\tCódigo finalizado. Estoque de materia prima acabou e o depósito de canetas está vazio");
             break;
         }
-        if (slot_disponivel > 0)
+        if (slot_disponivel_local > 0 && estoque_materiaPrima_local > 0)
         {
-            sem_post(&decrementa_materiaPrima);
-            decrementaMateriaPrima(ENVIO_MATERIA_INTERACAO); //  Decrementa x unidades do estoque de materia prima
-            sem_post(&produza);
+            // printf("\nsem_getValue da variavel ");
+            if (!emProducao)
+            {
+                sem_post(&decrementa_materiaPrima);
+
+                for (int i = 0; i < ENVIO_MATERIA_INTERACAO; i++) //  Decrementa x unidades do estoque de materia prima
+                {
+                    pthread_mutex_lock(&acessar_deposito_materiaPrima);
+                    materia_prima_disponivel--;
+                    pthread_mutex_unlock(&acessar_deposito_materiaPrima);
+                }
+                sem_post(&produza);
+            }
         }
     }
 }
 int main()
 {
+    //  Inicializar os semáforos
     sem_init(&decrementa_materiaPrima, 0, 0); //  Inicia o semaforo para controle de estoque de materia prima
     sem_init(&produza, 0, 0);                 //  Inicia o semaforo para não produzindo
     sem_init(&enviarCaneta, 0, 0);            //  Inicia o semaforo para o envio das canetas
 
-    { //  Criação das threads
+    //  Criação das threads
+    {
         if (pthread_create(&thread_list_ID[0], 0, (void *)depos_madeira, 0) != 0)
         {
             fprintf(stderr, "Erro ao criar o Célula de depósito de materia prima\n");
@@ -177,28 +192,30 @@ int main()
         {
             fprintf(stderr, "Erro ao criar o Comprador\n");
         }
-        //  Threads iniciadas e agora serão dadas o join
+        {
+            //  Threads iniciadas e agora serão dadas o join
 
-        // if (pthread_join(thread_list_ID[0], NULL) != 0)
-        // {
-        //     fprintf(stderr, "erro ao iniciar a thread\n");
-        // }
-        // if (pthread_join(thread_list_ID[1], NULL) != 0)
-        // {
-        //     fprintf(stderr, "erro ao iniciar a thread\n");
-        // }
-        // if (pthread_join(thread_list_ID[2], NULL) != 0)
-        // {
-        //     fprintf(stderr, "erro ao iniciar a thread\n");
-        // }
-        // if (pthread_join(thread_list_ID[3], NULL) != 0)
-        // {
-        //     fprintf(stderr, "erro ao iniciar a thread\n");
-        // }
-        // if (pthread_join(thread_list_ID[4], NULL) != 0)
-        // {
-        //     fprintf(stderr, "erro ao iniciar a thread\n");
-        // }
+            // if (pthread_join(thread_list_ID[0], NULL) != 0)
+            // {
+            //     fprintf(stderr, "erro ao iniciar a thread\n");
+            // }
+            // if (pthread_join(thread_list_ID[1], NULL) != 0)
+            // {
+            //     fprintf(stderr, "erro ao iniciar a thread\n");
+            // }
+            // if (pthread_join(thread_list_ID[2], NULL) != 0)
+            // {
+            //     fprintf(stderr, "erro ao iniciar a thread\n");
+            // }
+            // if (pthread_join(thread_list_ID[3], NULL) != 0)
+            // {
+            //     fprintf(stderr, "erro ao iniciar a thread\n");
+            // }
+            // if (pthread_join(thread_list_ID[4], NULL) != 0)
+            // {
+            //     fprintf(stderr, "erro ao iniciar a thread\n");
+            // }
+        }
     }
     controle();
     /* coisas a acertar no código:
