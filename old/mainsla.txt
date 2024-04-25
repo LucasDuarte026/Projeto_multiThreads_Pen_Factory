@@ -19,8 +19,8 @@ int MAX_MATERIA_PRIMA, ENVIO_MATERIA_INTERACAO, TEMPO_ENVIO_DEPFAB, TEMPO_PRODUC
 
 pthread_t thread_list_ID[6];
 
-int slots_disponiveis;
-int materia_prima_disponivel;
+int slots_disponiveis = MAX_DEPOSITO_CANETA;
+int materia_prima_disponivel = MAX_MATERIA_PRIMA;
 int quant_interation;
 int canetasCompradas = 0;
 
@@ -312,17 +312,7 @@ int criador(void)
 int main()
 {
 
-    printf("\nDigite os 7 parâmetros na ordem:\n\t MAX_MATERIA_PRIMA, ENVIO_MATERIA_INTERACAO, TEMPO_ENVIO_DEPFAB, TEMPO_PRODUCAO_CANETA, MAX_DEPOSITO_CANETA, COMPRA_POR_INTERACAO, DELAY_COMPRA_CONSUMIDOR\n");
-    scanf("%d %d %d %d %d %d %d", &MAX_MATERIA_PRIMA, &ENVIO_MATERIA_INTERACAO, &TEMPO_ENVIO_DEPFAB, &TEMPO_PRODUCAO_CANETA, &MAX_DEPOSITO_CANETA, &COMPRA_POR_INTERACAO, &DELAY_COMPRA_CONSUMIDOR);
-    // MAX_MATERIA_PRIMA = 25;
-    // ENVIO_MATERIA_INTERACAO = 3;
-    // TEMPO_ENVIO_DEPFAB = 1;
-    // TEMPO_PRODUCAO_CANETA = 1;
-    // MAX_DEPOSITO_CANETA = 10;
-    // COMPRA_POR_INTERACAO = 2;
-    // DELAY_COMPRA_CONSUMIDOR = 1;
+    scanf("%d %d %d", &MAX_MATERIA_PRIMA, &ENVIO_MATERIA_INTERACAO, &TEMPO_ENVIO_DEPFAB, &TEMPO_PRODUCAO_CANETA, &MAX_DEPOSITO_CANETA, &COMPRA_POR_INTERACAO & DELAY_COMPRA_CONSUMIDOR);
 
-    slots_disponiveis = MAX_DEPOSITO_CANETA;
-    materia_prima_disponivel = MAX_MATERIA_PRIMA;
     return criador();
 }

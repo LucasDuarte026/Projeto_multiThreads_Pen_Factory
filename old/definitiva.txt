@@ -16,11 +16,11 @@
 
 // Macros pré definidas pelo usuário:
 int MAX_MATERIA_PRIMA, ENVIO_MATERIA_INTERACAO, TEMPO_ENVIO_DEPFAB, TEMPO_PRODUCAO_CANETA, MAX_DEPOSITO_CANETA, COMPRA_POR_INTERACAO, DELAY_COMPRA_CONSUMIDOR;
+int slots_disponiveis;
+int materia_prima_disponivel ;
 
 pthread_t thread_list_ID[6];
 
-int slots_disponiveis;
-int materia_prima_disponivel;
 int quant_interation;
 int canetasCompradas = 0;
 
@@ -65,10 +65,8 @@ Suposições lógicas para descrição do projeto
         rank 4: thread_list_ID[4] = Depósito de canetas
         rank 5: thread_list_ID[5] = Comprador
 */
-// -------------------------- Funções acessoras --------------------------
 
 // -------------------------- Threads --------------------------
-
 void controle(void)
 {
     while (1) //   Variável controlada pelo criador para terminar esta thread
@@ -129,7 +127,7 @@ void controle(void)
             pthread_mutex_lock(&acessar_deposito_materiaPrima);
             pthread_mutex_lock(&acessar_deposito_caneta);
             pthread_mutex_lock(&canetas_do_comprador);
-            printf("\nControle:  | Canetas compradas: %d | Slots: %d | Matéria Prima: %d |\n", canetasCompradas, slots_disponiveis, materia_prima_disponivel);
+            printf("\nControle:  | Canetas compradas: %d | Slots: %d | Matéria Prima: %d |\n", canetasCompradas, MAX_DEPOSITO_CANETA, materia_prima_disponivel);
             pthread_mutex_unlock(&canetas_do_comprador);
             pthread_mutex_unlock(&acessar_deposito_caneta);
             pthread_mutex_unlock(&acessar_deposito_materiaPrima);
@@ -151,7 +149,7 @@ void depos_madeira(void)
 
         pthread_mutex_lock(&acessar_deposito_materiaPrima); // Garante acecsso exclusivo ao estoque e o decrementa
         pthread_mutex_lock(&quant_mutex);                   // Obtém a quandidade de decremento do deposito de madeira
-        materia_prima_disponivel -= quant_interation;       // Decrementa de fato
+        materia_prima_disponivel -= quant_interation;              // Decrementa de fato
         pthread_mutex_unlock(&quant_mutex);
         pthread_mutex_unlock(&acessar_deposito_materiaPrima);
 
@@ -223,9 +221,6 @@ void comprador(void)
                 canetasCompradas++;
             }
         }
-        else
-        {
-        }
         pthread_mutex_unlock(&canetas_do_comprador);
         pthread_mutex_unlock(&acessar_deposito_caneta);
         pthread_cond_signal(&sinal_ao_criador);
@@ -234,6 +229,8 @@ void comprador(void)
     }
 }
 
+int slots_disponiveis = MAX_DEPOSITO_CANETA;
+int materia_prima_disponivel = MAX_MATERIA_PRIMA;
 int criador(void)
 {
     //  Inicializar os semáforos
@@ -309,20 +306,19 @@ int criador(void)
     return 0;
 }
 
+// -------------------------- Main --------------------------
 int main()
 {
-
-    printf("\nDigite os 7 parâmetros na ordem:\n\t MAX_MATERIA_PRIMA, ENVIO_MATERIA_INTERACAO, TEMPO_ENVIO_DEPFAB, TEMPO_PRODUCAO_CANETA, MAX_DEPOSITO_CANETA, COMPRA_POR_INTERACAO, DELAY_COMPRA_CONSUMIDOR\n");
-    scanf("%d %d %d %d %d %d %d", &MAX_MATERIA_PRIMA, &ENVIO_MATERIA_INTERACAO, &TEMPO_ENVIO_DEPFAB, &TEMPO_PRODUCAO_CANETA, &MAX_DEPOSITO_CANETA, &COMPRA_POR_INTERACAO, &DELAY_COMPRA_CONSUMIDOR);
-    // MAX_MATERIA_PRIMA = 25;
-    // ENVIO_MATERIA_INTERACAO = 3;
-    // TEMPO_ENVIO_DEPFAB = 1;
-    // TEMPO_PRODUCAO_CANETA = 1;
-    // MAX_DEPOSITO_CANETA = 10;
-    // COMPRA_POR_INTERACAO = 2;
-    // DELAY_COMPRA_CONSUMIDOR = 1;
-
-    slots_disponiveis = MAX_DEPOSITO_CANETA;
-    materia_prima_disponivel = MAX_MATERIA_PRIMA;
+    int slots_disponiveis = MAX_DEPOSITO_CANETA;
+    int materia_prima_disponivel = MAX_MATERIA_PRIMA;
+    // printf("\nDigite os 7 parâmetros na ordem:\n\t MAX_MATERIA_PRIMA, ENVIO_MATERIA_INTERACAO, TEMPO_ENVIO_DEPFAB, TEMPO_PRODUCAO_CANETA, MAX_DEPOSITO_CANETA, COMPRA_POR_INTERACAO, DELAY_COMPRA_CONSUMIDOR\n");
+    // scanf("%d %d %d %d %d %d %d", &MAX_MATERIA_PRIMA, &ENVIO_MATERIA_INTERACAO, &TEMPO_ENVIO_DEPFAB, &TEMPO_PRODUCAO_CANETA, &MAX_DEPOSITO_CANETA, &COMPRA_POR_INTERACAO, &DELAY_COMPRA_CONSUMIDOR);
+    MAX_MATERIA_PRIMA = 25;
+    ENVIO_MATERIA_INTERACAO = 3;
+    TEMPO_ENVIO_DEPFAB = 1;
+    TEMPO_PRODUCAO_CANETA = 1;
+    MAX_DEPOSITO_CANETA = 10;
+    COMPRA_POR_INTERACAO = 2;
+    DELAY_COMPRA_CONSUMIDOR = 1;
     return criador();
 }
