@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <pthread.h>
 
-#define MAX_PRODUCED 17
+#define MAX_PRODUCED 27
 #define MAX_QUEUE 7
 
 pthread_cond_t cond_queue_empty, cond_queue_full;

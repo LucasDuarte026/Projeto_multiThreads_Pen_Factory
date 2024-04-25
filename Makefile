@@ -4,6 +4,5 @@ run:
 	./main
 debug:
 	gcc  -g3 ./*.c -o main
-fullDebug :
+full_debug :
 	gcc  -Wall -g3 ./*.c -o main
-	

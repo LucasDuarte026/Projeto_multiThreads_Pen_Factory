@@ -18,9 +18,9 @@
 #define COMPRA_POR_INTERACAO 2
 #define ENVIO_MATERIA_INTERACAO 3
 #define TEMPO_ENVIO_DEPFAB 1
-#define TEMPO_PRODUCAO_CANETA 0.25
-#define MAX_DEPOSITO_CANETA 10
-#define MAX_MATERIA_PRIMA 25
+#define TEMPO_PRODUCAO_CANETA 1
+#define MAX_DEPOSITO_CANETA 8
+#define MAX_MATERIA_PRIMA 40
 
 pthread_t thread_list_ID[6];
 
@@ -34,15 +34,15 @@ pthread_mutex_t quant_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t acessar_deposito_caneta = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t acessar_deposito_materiaPrima = PTHREAD_MUTEX_INITIALIZER;
 
+pthread_cond_t compra_liberada = PTHREAD_COND_INITIALIZER;
 pthread_cond_t sinal_materia_prima = PTHREAD_COND_INITIALIZER;
 pthread_cond_t sinal_deposito_caneta = PTHREAD_COND_INITIALIZER;
-pthread_cond_t sinal_ao_criador = PTHREAD_COND_INITIALIZER;
 
 sem_t decrementa_materiaPrima;
 sem_t materia_deslocada;
 sem_t produza;
 sem_t producao_concluida;
-sem_t liberar_deposito_caneta;
+sem_t chegouCaneta;
 
 /*
 Suposições lógicas para descrição do projeto
@@ -77,14 +77,16 @@ Suposições lógicas para descrição do projeto
 void controle(void)
 {
     printf("\niniciado controle");
+    fflush(stdout);
 
+    // Inicio da região crítica
     while (1)
     {
+        pthread_mutex_lock(&acessar_deposito_materiaPrima);
+        pthread_mutex_lock(&acessar_deposito_caneta);
 
-        if (materia_prima_disponivel > 0 && slots_disponiveis > 0)
+        if (slots_disponiveis > 0)
         {
-            pthread_mutex_lock(&acessar_deposito_materiaPrima);
-            pthread_mutex_lock(&acessar_deposito_caneta);
             if (slots_disponiveis > ENVIO_MATERIA_INTERACAO)
                 quant_interation = ENVIO_MATERIA_INTERACAO;
             else
@@ -100,50 +102,35 @@ void controle(void)
                 sem_wait(&materia_deslocada);                                            // Espera até a materia prima ser deslocada entre oo depósito e a fábrica
                 sem_post(&produza);                                                      // Assim que a materia prima chegar, começar a produzir n caneta
                 sem_wait(&producao_concluida);                                           // Controle fica esperando a produção acabar
-                sem_post(&liberar_deposito_caneta);                                      // Ao acabar a produção, manda enviar umam caneta ao deposito
-                pthread_cond_wait(&sinal_deposito_caneta, &acessar_deposito_caneta);     // libera pro deposito o acesso do deposito e fica esperando o sinal pra voltar a ter acesso ao estoque de canetas
+                sem_post(&chegouCaneta);                                                 // Ao acabar a produção, manda enviar umam caneta ao deposito
+                pthread_cond_wait(&compra_liberada, &acessar_deposito_caneta);     // libera pro deposito o acesso do deposito e fica esperando o sinal pra voltar a ter acesso ao estoque de canetas
 
                 pthread_mutex_lock(&canetas_do_comprador);
-                printf("\nControle:  | Canetas compradas: %d | Slots: %d | Matéria Prima: %d |\n", canetasCompradas, slots_disponiveis, materia_prima_disponivel);
+                printf("\nControle:  | Canetas compradas: %d | | Slots: %d | | Matéria Prima: %d|\n", canetasCompradas, slots_disponiveis, materia_prima_disponivel);
+                fflush(stdout);
                 pthread_mutex_unlock(&canetas_do_comprador);
             }
-            pthread_mutex_unlock(&acessar_deposito_caneta);
-            pthread_mutex_unlock(&acessar_deposito_materiaPrima);
+            else if (materia_prima_disponivel == 0) // Caso não tenha espaço no deposito de caneta e, agora, não tenha tambpem materia prima, termina o programa
+            {
+                //  Finalizar programa
+                printf("\n\tCódigo finalizado. Estoque de materia prima acabou e o depósito de canetas está vazio");
+                fflush(stdout);
+                break;
+            }
+            else
+            {
+                printf("\nRodada obsoleta");
+            }
         }
-
-        else if (slots_disponiveis < MAX_DEPOSITO_CANETA) //    Ainda tem slots, mas a materia prima acabou
-        {
-            // pthread_mutex_lock(&acessar_deposito_materiaPrima);
-            // pthread_mutex_lock(&acessar_deposito_caneta);
-
-            // // quant_interation = COMPRA_POR_INTERACAO;
-            // pthread_mutex_lock(&canetas_do_comprador);
-            // // printf("\nControle:  | Canetas compradas: %d | Slots: %d | Matéria Prima: %d |\n", canetasCompradas, slots_disponiveis, materia_prima_disponivel);
-            // pthread_mutex_unlock(&canetas_do_comprador);
-
-            // pthread_mutex_unlock(&acessar_deposito_caneta);
-            // pthread_mutex_unlock(&acessar_deposito_materiaPrima);
-            pthread_cond_broadcast(&sinal_deposito_caneta); // libera o comprador o acesso do deposito para que compre as canetas finais do depósito
-        }
-        else if (slots_disponiveis == MAX_DEPOSITO_CANETA && materia_prima_disponivel == 0) // Caso acabou os slots e a materia prima, deve acabar
-        {
-            //  Finalizar programa
-            // pthread_mutex_lock(&acessar_deposito_materiaPrima);
-            // pthread_mutex_lock(&acessar_deposito_caneta);
-            // pthread_mutex_lock(&canetas_do_comprador);
-            // printf("\nControle:  | Canetas compradas: %d | Slots: %d | Matéria Prima: %d |\n", canetasCompradas, slots_disponiveis, materia_prima_disponivel);
-            // pthread_mutex_unlock(&canetas_do_comprador);
-            // pthread_mutex_unlock(&acessar_deposito_caneta);
-            // pthread_mutex_unlock(&acessar_deposito_materiaPrima);
-            printf("\n\tCódigo finalizado. Estoque de materia prima acabou e o depósito de canetas está vazioz\n");
-            break;
-        }
+        pthread_mutex_unlock(&acessar_deposito_materiaPrima);
+        pthread_mutex_unlock(&acessar_deposito_caneta);
     }
 }
 
 void depos_madeira(void)
 {
     printf("\niniciado depos_madeira");
+    fflush(stdout);
 
     while (1)
     {
@@ -161,12 +148,14 @@ void depos_madeira(void)
         sleep(TEMPO_ENVIO_DEPFAB);
         sem_post(&materia_deslocada);
         // printf("\nDEPMAT: materia prima disponivel: %d", materia_prima_disponivel);
+        fflush(stdout);
     }
 }
 
 void celula_fabrica(void)
 {
     printf("\nIniciado celula_fabrica");
+    fflush(stdout);
 
     while (1)
     {
@@ -176,6 +165,7 @@ void celula_fabrica(void)
         pthread_mutex_lock(&quant_mutex); //  Pegar rapidamente a quantidade de produções que será feita
 
         // printf("\nFAB:  Fabricando %d unidade", quant_interation);
+        fflush(stdout);
         for (int i = 0; i < quant_interation; i++) // fabrica n canetas garantindo a quantidade ccerta que saiu do depósito
             sleep(TEMPO_PRODUCAO_CANETA);          // Tempo em que está fabricando um caneta
 
@@ -187,9 +177,10 @@ void celula_fabrica(void)
 void depos_caneta(void)
 {
     printf("\niniciado depos_caneta");
+    fflush(stdout);
     while (1)
     {
-        sem_wait(&liberar_deposito_caneta);           //  Aguarda o controle avisar que chegou n canetas
+        sem_wait(&chegouCaneta);                      //  Aguarda o controle avisar que chegou n canetas
         pthread_mutex_lock(&quant_mutex);             //  Pegar a quantidade de produções que será feita
         pthread_mutex_lock(&acessar_deposito_caneta); //  Garante exclusão mútua na quantidade de slots no armazém
 
@@ -197,19 +188,22 @@ void depos_caneta(void)
 
         pthread_mutex_unlock(&quant_mutex);             //  Liberar acesso
         pthread_mutex_unlock(&acessar_deposito_caneta); //  Liberar acesso
-        pthread_cond_broadcast(&sinal_deposito_caneta); //  Mandar o sinal para o comprador diretamente em que pode-se olha a quantidade de canetas no estoque
+        // pthread_cond_signal(&sinal_deposito_caneta);    //  Dar o sinal para o controle para o fim da cadeia de produçao
+        pthread_cond_broadcast(&compra_liberada);          //  Mandar o sinal para o comprador diretamente em que pode-se olha a quantidade de canetas no estoque
 
         // printf("\nDEPCAN:   quantidade de canetas no depósito são %d e slots %d", MAX_DEPOSITO_CANETA - slots_disponiveis, slots_disponiveis);
+        fflush(stdout);
     }
 }
 
 void comprador(void)
 {
     printf("\niniciado comprador");
+    fflush(stdout);
     while (1)
     {
         pthread_mutex_lock(&acessar_deposito_caneta);
-        pthread_cond_wait(&sinal_deposito_caneta, &acessar_deposito_caneta);
+        pthread_cond_wait(&compra_liberada, &acessar_deposito_caneta);
 
         pthread_mutex_lock(&canetas_do_comprador);
         int local_max = MAX_DEPOSITO_CANETA - slots_disponiveis;
@@ -227,23 +221,21 @@ void comprador(void)
                 slots_disponiveis++;
                 canetasCompradas++;
             }
-        }
-        else
-        {
-        }
-        pthread_mutex_unlock(&canetas_do_comprador);
-        pthread_mutex_unlock(&acessar_deposito_caneta);
-        pthread_cond_signal(&sinal_ao_criador);
+            sleep(DELAY_COMPRA_CONSUMIDOR); // Delay por compra, independente da quantidade 
 
-        sleep(DELAY_COMPRA_CONSUMIDOR); // Delay por compra, independente da quantidade
+            printf("\nCOMPRADOR: acaba de comprar %d canetas | Total: %d", COMPRA_POR_INTERACAO, canetasCompradas);
+            fflush(stdout);
+            pthread_mutex_unlock(&canetas_do_comprador);
+            pthread_mutex_unlock(&acessar_deposito_caneta);
+        }
     }
 }
-int criador(void)
+void criador(void)
 {
     //  Inicializar os semáforos
     sem_init(&decrementa_materiaPrima, 0, 0); //  Inicia o semaforo para controle de estoque de materia prima
     sem_init(&produza, 0, 0);                 //  Inicia o semaforo para não produzindo
-    sem_init(&liberar_deposito_caneta, 0, 0); //  Inicia o semaforo para o envio das canetas
+    sem_init(&chegouCaneta, 0, 0);            //  Inicia o semaforo para o envio das canetas
 
     //  Criação das threads
     {
@@ -267,50 +259,39 @@ int criador(void)
         {
             fprintf(stderr, "Erro ao criar o Comprador\n");
         }
-        int contador_canetas = 0;
-        while (contador_canetas < MAX_MATERIA_PRIMA)
         {
-            pthread_mutex_lock(&canetas_do_comprador);
-            pthread_cond_wait(&sinal_ao_criador, &canetas_do_comprador);
-            if (canetasCompradas > contador_canetas)
-            {
-
-                printf("\nComprador comprou %2.d canetas nesta interação e o total já comprado é: %2.d", canetasCompradas - contador_canetas, canetasCompradas);
-                fflush(stdout);
-                contador_canetas = canetasCompradas;
-            }
-            else if (canetasCompradas == contador_canetas)
-            {
-                printf("\nNão houve compra nessa interação");
-                fflush(stdout);
-            }
-            pthread_mutex_unlock(&canetas_do_comprador);
             //  Threads iniciadas e agora serão dadas o join
 
-            // pthread_join(thread_list_ID[1], NULL);
-            // printf("\nRank 1 saindo");
-            // pthread_join(thread_list_ID[2], NULL);
-            // printf("\nRank 2 saindo");
-            // pthread_join(thread_list_ID[3], NULL);
-            // printf("\nRank 3 saindo");
-            // pthread_join(thread_list_ID[4], NULL);
-            // printf("\nRank 4 saindo");
-            // pthread_join(thread_list_ID[5], NULL);
-            // printf("\nRank 5 saindo");
+            pthread_join(thread_list_ID[1], NULL);
+            printf("\nRank 1 saindo");
+            fflush(stdout);
+            pthread_join(thread_list_ID[2], NULL);
+            printf("\nRank 2 saindo");
+            fflush(stdout);
+            pthread_join(thread_list_ID[3], NULL);
+            printf("\nRank 3 saindo");
+            fflush(stdout);
+            pthread_join(thread_list_ID[4], NULL);
+            printf("\nRank 4 saindo");
+            fflush(stdout);
+            //     pthread_join(thread_list_ID[5], NULL);
+            //     printf("\nRank 5 saindo");
+            fflush(stdout);
+        }
     }
-    return 0;
 }
 
 int main()
 {
+    criador();
 
     /* coisas a acertar no código:
         acertar essa linha pra == 0            if (estoque_materiaPrima <= 0 && slot_disponivel <= 0)
-        COLOCAR MUTEX NO QUANT_INTERATION
+
 
 
         destruir os semaforos aqui no final
     */
 
-    return criador();
+    return 0;
 }
