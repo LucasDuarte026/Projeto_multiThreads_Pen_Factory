@@ -95,7 +95,7 @@ void controle(void)
                 sem_wait(&producao_concluida);                                           // Controle fica esperando a produção acabar
                 sem_post(&liberar_deposito_caneta);                                      // Ao acabar a produção, manda enviar umam caneta ao deposito
                 pthread_cond_wait(&sinal_deposito_caneta, &acessar_deposito_caneta);     // libera pro deposito o acesso do deposito e fica esperando o sinal pra voltar a ter acesso ao estoque de canetas
-
+                
                 // pthread_mutex_lock(&canetas_do_comprador);
                 // printf("\nControle:  | Canetas compradas: %d | Slots: %d | Matéria Prima: %d |\n", canetasCompradas, slots_disponiveis, materia_prima_disponivel);
                 // pthread_mutex_unlock(&canetas_do_comprador);
@@ -119,7 +119,7 @@ void controle(void)
             pthread_mutex_unlock(&acessar_deposito_caneta);
             pthread_mutex_unlock(&acessar_deposito_materiaPrima);
             */
-            pthread_cond_broadcast(&sinal_deposito_caneta); // libera o comprador o acesso do deposito para que compre as canetas finais do depósito
+            pthread_cond_signal(&sinal_deposito_caneta); // libera o comprador o acesso do deposito para que compre as canetas finais do depósito
         }
         else if (slots_disponiveis == MAX_DEPOSITO_CANETA && materia_prima_disponivel == 0) // Caso acabou os slots e a materia prima, deve acabar
         {
@@ -193,7 +193,7 @@ void depos_caneta(void)
 
         pthread_mutex_unlock(&quant_mutex);             //  Liberar acesso
         pthread_mutex_unlock(&acessar_deposito_caneta); //  Liberar acesso
-        pthread_cond_broadcast(&sinal_deposito_caneta); //  Mandar o sinal para o comprador diretamente em que pode-se olha a quantidade de canetas no estoque
+        pthread_cond_signal(&sinal_deposito_caneta); //  Mandar o sinal para o comprador diretamente em que pode-se olha a quantidade de canetas no estoque
 
         // printf("\nDEPCAN:   quantidade de canetas no depósito são %d e slots %d", MAX_DEPOSITO_CANETA - slots_disponiveis, slots_disponiveis);
     }
@@ -204,7 +204,7 @@ void comprador(void)
     while (1) //   Variável controlada pelo criador para terminar esta thread
     {
         pthread_mutex_lock(&acessar_deposito_caneta);
-        pthread_cond_wait(&sinal_deposito_caneta, &acessar_deposito_caneta);
+        // pthread_cond_wait(&sinal_deposito_caneta, &acessar_deposito_caneta);
 
         pthread_mutex_lock(&canetas_do_comprador);
         int local_max = MAX_DEPOSITO_CANETA - slots_disponiveis;
@@ -222,9 +222,6 @@ void comprador(void)
                 slots_disponiveis++;
                 canetasCompradas++;
             }
-        }
-        else
-        {
         }
         pthread_mutex_unlock(&canetas_do_comprador);
         pthread_mutex_unlock(&acessar_deposito_caneta);
@@ -289,6 +286,7 @@ int criador(void)
         pthread_mutex_unlock(&canetas_do_comprador);
     }
     printf("\n\n-- -- -- -- Compra finalizada com sucesso!!-- -- -- -- \n");
+
     //  Finalizar os semáforos
     sem_destroy(&decrementa_materiaPrima);
     sem_destroy(&produza);
@@ -313,15 +311,17 @@ int main()
 {
 
     printf("\nDigite os 7 parâmetros na ordem:\n\t MAX_MATERIA_PRIMA, ENVIO_MATERIA_INTERACAO, TEMPO_ENVIO_DEPFAB, TEMPO_PRODUCAO_CANETA, MAX_DEPOSITO_CANETA, COMPRA_POR_INTERACAO, DELAY_COMPRA_CONSUMIDOR\n");
-    scanf("%d %d %d %d %d %d %d", &MAX_MATERIA_PRIMA, &ENVIO_MATERIA_INTERACAO, &TEMPO_ENVIO_DEPFAB, &TEMPO_PRODUCAO_CANETA, &MAX_DEPOSITO_CANETA, &COMPRA_POR_INTERACAO, &DELAY_COMPRA_CONSUMIDOR);
-    // MAX_MATERIA_PRIMA = 25;
-    // ENVIO_MATERIA_INTERACAO = 3;
-    // TEMPO_ENVIO_DEPFAB = 1;
-    // TEMPO_PRODUCAO_CANETA = 1;
-    // MAX_DEPOSITO_CANETA = 10;
-    // COMPRA_POR_INTERACAO = 2;
-    // DELAY_COMPRA_CONSUMIDOR = 1;
+    // scanf("%d %d %d %d %d %d %d", &MAX_MATERIA_PRIMA, &ENVIO_MATERIA_INTERACAO, &TEMPO_ENVIO_DEPFAB, &TEMPO_PRODUCAO_CANETA, &MAX_DEPOSITO_CANETA, &COMPRA_POR_INTERACAO, &DELAY_COMPRA_CONSUMIDOR);
 
+    //  Util para mudança manual nos parâmetros
+    MAX_MATERIA_PRIMA = 25;
+    ENVIO_MATERIA_INTERACAO = 1;
+    TEMPO_ENVIO_DEPFAB = 3;
+    TEMPO_PRODUCAO_CANETA = 3;
+    MAX_DEPOSITO_CANETA = 4;
+    COMPRA_POR_INTERACAO = 4;
+    DELAY_COMPRA_CONSUMIDOR = 1;
+// 25 1 3 3 5 4 1
     slots_disponiveis = MAX_DEPOSITO_CANETA;
     materia_prima_disponivel = MAX_MATERIA_PRIMA;
     return criador();
