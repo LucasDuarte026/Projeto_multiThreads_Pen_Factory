@@ -1,11 +1,11 @@
 #!/bin/bash
-./main < testes3_semBrodcast/1.in > testes3_semBrodcast/resultado3_semBroadcast/1.out &
-./main < testes3_semBrodcast/2.in > testes3_semBrodcast/resultado3_semBroadcast/2.out &
-./main < testes3_semBrodcast/3.in > testes3_semBrodcast/resultado3_semBroadcast/3.out &
-./main < testes3_semBrodcast/4.in > testes3_semBrodcast/resultado3_semBroadcast/4.out &
-./main < testes3_semBrodcast/5.in > testes3_semBrodcast/resultado3_semBroadcast/5.out &
-./main < testes3_semBrodcast/6.in > testes3_semBrodcast/resultado3_semBroadcast/6.out &
-./main < testes3_semBrodcast/7.in > testes3_semBrodcast/resultado3_semBroadcast/7.out &
-./main < testes3_semBrodcast/8.in > testes3_semBrodcast/resultado3_semBroadcast/8.out &
-./main < testes3_semBrodcast/9.in > testes3_semBrodcast/resultado3_semBroadcast/9.out &
-./main < testes3_semBrodcast/10.in > testes3_semBrodcast/resultado3_semBroadcast/10.out &
+./main < testes4/1.in > testes4/resultado4/1.out &
+./main < testes4/2.in > testes4/resultado4/2.out &
+./main < testes4/3.in > testes4/resultado4/3.out &
+./main < testes4/4.in > testes4/resultado4/4.out &
+./main < testes4/5.in > testes4/resultado4/5.out &
+./main < testes4/6.in > testes4/resultado4/6.out &
+./main < testes4/7.in > testes4/resultado4/7.out &
+./main < testes4/8.in > testes4/resultado4/8.out &
+./main < testes4/9.in > testes4/resultado4/9.out &
+./main < testes4/10.in > testes4/resultado4/10.out &
