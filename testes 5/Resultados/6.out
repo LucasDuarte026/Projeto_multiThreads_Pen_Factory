@@ -1,0 +1,17 @@
+
+Digite os 7 parâmetros na ordem:
+	 MAX_MATERIA_PRIMA, ENVIO_MATERIA_INTERACAO, TEMPO_ENVIO_DEPFAB, TEMPO_PRODUCAO_CANETA, MAX_DEPOSITO_CANETA, COMPRA_POR_INTERACAO, DELAY_COMPRA_CONSUMIDOR
+
+Depósito de Matéria-Prima iniciado!
+Célula de Fabricação iniciada!
+Controle iniciado!
+Depósito de Canetas iniciado!
+Comprador iniciado!
+Não houve compra nessa interação
+Comprador comprou 20 canetas nesta interação e o total já comprado é: 20
+Comprador comprou  4 canetas nesta interação e o total já comprado é: 24
+Comprador comprou 20 canetas nesta interação e o total já comprado é: 44
+Comprador comprou 20 canetas nesta interação e o total já comprado é: 64
+Comprador comprou  7 canetas nesta interação e o total já comprado é: 71
+
+-- -- -- -- Compra finalizada com sucesso!!-- -- -- -- 
