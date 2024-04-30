@@ -1,0 +1,47 @@
+exemplo de ordem:
+// MAX_MATERIA_PRIMA = 25;
+// ENVIO_MATERIA_INTERACAO = 3;
+// TEMPO_ENVIO_DEPFAB = 1;
+// TEMPO_PRODUCAO_CANETA = 1;
+// MAX_DEPOSITO_CANETA = 10;
+// COMPRA_POR_INTERACAO = 2;
+// DELAY_COMPRA_CONSUMIDOR = 1;
+
+
+
+100 10 1 1 70 1 2
+
+Muita matéria-prima, fluxo alto deposito->fábrica, espaço amplo para canetas, compras pequenas
+Fábrica e Depósitos rodando constantemente no começo e comprador rodando solo durante final
+
+20 1 1 1 3 5 1
+Pouca matéria-prima, fluxo baixo depósito->fábrica, espaço pequeno para canetas, compras grandes
+Comprador tenta e falha em adquirir muitas canetas constantemente enquanto ocorre fabricação mais lenta
+
+50 10 1 1 10 10 12
+Oferta x Demanda aproximadamente balanceada
+
+Randomicos
+
+// MAX_MATERIA_PRIMA = [5,75]
+// ENVIO_MATERIA_INTERACAO = [1,20]
+// TEMPO_ENVIO_DEPFAB = [1,5]
+// TEMPO_PRODUCAO_CANETA = [1,3]
+// MAX_DEPOSITO_CANETA = [5,75]
+// COMPRA_POR_INTERACAO = [1,20]
+// DELAY_COMPRA_CONSUMIDOR = [1,10]
+
+30 16 3 1 57 17 9
+
+10 17 2 3 69 19 7
+
+71 20 5 1 24 20 6
+
+13 4 3 1 29 17 10
+
+44 9 3 3 32 8 5
+
+
+
+
+

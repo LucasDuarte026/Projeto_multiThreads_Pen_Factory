@@ -10,6 +10,7 @@ Este projeto consiste em uma aplicação em C utilizando a biblioteca Pthreads p
 - Daniel Filho (13677114)
 - Daniel Umeda (13676541)
 - Manoel Thomaz (13676392)
+- Leonardo Pereira (9039361)
 
 ## Funcionamento da Aplicação
 
